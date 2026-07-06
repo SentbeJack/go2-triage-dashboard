@@ -233,6 +233,7 @@
   </div>
   <div class="spacer"></div>
   <button class="btn small" id="btnPullInbox" title="Slack에서 자동 수신된 멘션을 지금 가져오기 (1분마다 자동으로도 확인해요)">Slack 수신함</button>
+  <button class="btn small" id="btnBackfill" title="Slack API로 최근 24시간 멘션을 일괄 수집 (놓친 메시지 복구)">놓친 멘션 복구</button>
   <button class="btn small" id="btnSyncAll" title="모든 항목을 Google Sheets에 전체 동기화">시트 전체 동기화</button>
   <button class="btn small" id="btnCsv">CSV 내려받기</button>
   <button class="btn small" id="btnTsv">표로 복사</button>
@@ -770,6 +771,29 @@ async function pullInbox(silent){
 }
 $("#btnPullInbox").addEventListener("click", () => pullInbox(false));
 setInterval(() => pullInbox(true), 60 * 1000);
+
+/* ───────── 놓친 멘션 백필 ───────── */
+$("#btnBackfill").addEventListener("click", async () => {
+  if(!state.webhook){ toast("설정에서 시트 URL을 먼저 등록해주세요"); return; }
+  const btn = $("#btnBackfill");
+  btn.disabled = true; btn.textContent = "수집 중…";
+  try{
+    const res = await fetch(state.webhook, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ action: "backfill", hours: 24 })
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || "백필 실패");
+    toast(data.count > 0 ? `${data.count}건의 놓친 멘션을 가져왔어요` : "놓친 멘션이 없어요");
+    if(data.count > 0) await pullInbox(false);
+  }catch(err){
+    toast("멘션 복구에 실패했어요: " + err.message);
+    console.warn("backfill 실패:", err);
+  }finally{
+    btn.disabled = false; btn.textContent = "놓친 멘션 복구";
+  }
+});
 
 /* ───────── 설정 모달 ───────── */
 function renderRules(){

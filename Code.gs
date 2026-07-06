@@ -1,5 +1,8 @@
 /**
- * GO2 Triage — Google Sheets 백엔드 v4 (이메일 알림 + 팀원 관리)
+ * GO2 Triage — Google Sheets 백엔드 v5 (놓친 멘션 백필)
+ *
+ * v4 대비 추가:
+ *   - backfillMentions: 봇이 있는 모든 채널에서 최근 24시간 멘션 일괄 수집
  *
  * v3 대비 추가:
  *   - P1 멘션 수신 시 이메일 알림 (MailApp)
@@ -90,7 +93,17 @@ function doPost(e) {
     }
   }
 
-  // ⑦ 대시보드 → Triage 시트 동기화 (기존 기능)
+  // ⑦ 놓친 멘션 백필 (Slack API로 최근 채널 메시지 일괄 수집)
+  if (data.action === 'backfill') {
+    try {
+      var count = backfillMentions(data.hours || 24);
+      return jsonOut({ ok: true, count: count });
+    } catch (err) {
+      return jsonOut({ ok: false, error: String(err) });
+    }
+  }
+
+  // ⑧ 대시보드 → Triage 시트 동기화 (기존 기능)
   const lock = LockService.getScriptLock();
   lock.tryLock(10000);
   try {
@@ -282,6 +295,103 @@ function doGet(e) {
     return jsonOut({ ok: true, members: members });
   }
   return ContentService.createTextOutput('GO2 Triage 백엔드 v4 정상 동작 중이에요.');
+}
+
+/* ───────── 놓친 멘션 백필 ───────── */
+function backfillMentions(hours) {
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('SLACK_BOT_TOKEN');
+  var myId = props.getProperty('MY_SLACK_USER_ID');
+  if (!token || !myId) throw new Error('SLACK_BOT_TOKEN 또는 MY_SLACK_USER_ID가 설정되지 않았어요');
+
+  var oldest = String(Math.floor((Date.now() - (hours || 24) * 3600 * 1000) / 1000));
+  var channels = getBotChannels(token);
+  if (!channels.length) throw new Error('봇이 참여한 채널이 없어요. 채널에 /invite @GO2 Triage 로 초대해주세요');
+
+  var sheet = getSheet(INBOX_SHEET, INBOX_HEADERS);
+  var existingIds = new Set();
+  var last = sheet.getLastRow();
+  if (last > 1) {
+    sheet.getRange(2, 1, last - 1, 1).getValues().flat().forEach(function(id) {
+      existingIds.add(String(id));
+    });
+  }
+
+  var added = 0;
+  var lock = LockService.getScriptLock();
+
+  for (var ci = 0; ci < channels.length; ci++) {
+    var chId = channels[ci];
+    var cursor = null;
+    var pages = 0;
+
+    do {
+      var url = 'https://slack.com/api/conversations.history?channel=' + encodeURIComponent(chId)
+        + '&oldest=' + oldest + '&limit=200';
+      if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+
+      var res = UrlFetchApp.fetch(url, {
+        headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true
+      });
+      var data = JSON.parse(res.getContentText());
+      if (!data.ok) break;
+
+      var messages = data.messages || [];
+      for (var mi = 0; mi < messages.length; mi++) {
+        var msg = messages[mi];
+        if (msg.subtype || msg.bot_id) continue;
+        if (!msg.text || msg.text.indexOf('<@' + myId + '>') === -1) continue;
+        if (msg.user === myId) continue;
+
+        var evId = msg.client_msg_id || (chId + '-' + msg.ts);
+        if (existingIds.has(evId)) continue;
+
+        var sender = resolveSenderName(token, msg.user);
+        var permalink = getPermalink(token, chId, msg.ts);
+        var when = new Date(parseFloat(msg.ts) * 1000);
+        var text = cleanSlackText(msg.text, myId);
+
+        lock.tryLock(10000);
+        try {
+          sheet.appendRow([evId, when, sender, text, permalink, false]);
+        } finally {
+          lock.releaseLock();
+        }
+        existingIds.add(evId);
+        added++;
+      }
+
+      cursor = (data.response_metadata && data.response_metadata.next_cursor) || null;
+      pages++;
+    } while (cursor && pages < 5);
+  }
+
+  return added;
+}
+
+function getBotChannels(token) {
+  var channels = [];
+  var cursor = null;
+  var pages = 0;
+  do {
+    var url = 'https://slack.com/api/conversations.list?types=public_channel,private_channel&exclude_archived=true&limit=200';
+    if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+
+    var res = UrlFetchApp.fetch(url, {
+      headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true
+    });
+    var data = JSON.parse(res.getContentText());
+    if (!data.ok) break;
+
+    (data.channels || []).forEach(function(ch) {
+      if (ch.is_member) channels.push(ch.id);
+    });
+
+    cursor = (data.response_metadata && data.response_metadata.next_cursor) || null;
+    pages++;
+  } while (cursor && pages < 10);
+
+  return channels;
 }
 
 function markImported(ids) {
