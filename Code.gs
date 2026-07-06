@@ -286,14 +286,23 @@ function doGet(e) {
     }
     return jsonOut({ ok: true, members: members });
   }
-  if (mode === 'backfill') {
-    try {
-      var hours = parseInt(e.parameter.hours) || 24;
-      var count = backfillMentions(hours);
-      return jsonOut({ ok: true, count: count });
-    } catch (err) {
-      return jsonOut({ ok: false, error: String(err) });
+  if (mode === 'inbox_all') {
+    var sheet = getSheet(INBOX_SHEET, INBOX_HEADERS);
+    var last = sheet.getLastRow();
+    var items = [];
+    if (last > 1) {
+      var rows = sheet.getRange(2, 1, last - 1, INBOX_HEADERS.length).getValues();
+      rows.forEach(function (r) {
+        items.push({
+          id: String(r[0]),
+          date: (r[1] instanceof Date) ? r[1].toISOString() : String(r[1]),
+          sender: String(r[2] || ''),
+          message: String(r[3] || ''),
+          link: String(r[4] || '')
+        });
+      });
     }
+    return jsonOut({ ok: true, items: items });
   }
   return ContentService.createTextOutput('GO2 Triage 백엔드 v5 정상 동작 중이에요.');
 }
