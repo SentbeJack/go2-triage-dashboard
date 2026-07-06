@@ -232,6 +232,7 @@
     <span class="sub">Slack 멘션 라우팅 보드</span>
   </div>
   <div class="spacer"></div>
+  <input type="text" id="searchBox" placeholder="티켓 검색 (발신자, 내용, 키워드)" style="padding:6px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;width:220px;font-family:inherit;background:var(--bg)">
   <button class="btn small" id="btnPullInbox" title="Slack에서 자동 수신된 멘션을 지금 가져오기 (1분마다 자동으로도 확인해요)">Slack 수신함</button>
   <button class="btn small" id="btnBackfill" title="Inbox 시트의 전체 항목을 다시 가져와서 누락된 건을 복구">누락 복구</button>
   <button class="btn small" id="btnSyncAll" title="모든 항목을 Google Sheets에 전체 동기화">시트 전체 동기화</button>
@@ -585,21 +586,61 @@ function cardHTML(it){
   </div>`;
 }
 
+let searchQuery = "";
+$("#searchBox").addEventListener("input", e => {
+  searchQuery = e.target.value.trim().toLowerCase();
+  render();
+});
+
+function matchesSearch(it){
+  if(!searchQuery) return true;
+  return (it.sender||"").toLowerCase().includes(searchQuery)
+    || (it.message||"").toLowerCase().includes(searchQuery)
+    || (it.priority||"").toLowerCase().includes(searchQuery)
+    || (TYPES[it.msgType]||"").includes(searchQuery);
+}
+
 function render(){
   applyMemberNames();
   const cols = {P1:[], P2:[], P3:[], DONE:[]};
-  for(const it of state.items){
+  const filtered = state.items.filter(matchesSearch);
+  for(const it of filtered){
     if(it.status === "done") cols.DONE.push(it);
     else cols[it.priority] ? cols[it.priority].push(it) : cols.P2.push(it);
   }
+
+  const DONE_RECENT_DAYS = 7;
+  const cutoff = new Date(Date.now() - DONE_RECENT_DAYS * 86400000);
+  const recentDone = cols.DONE.filter(it => new Date(it.doneAt || it.createdAt) >= cutoff);
+  const olderDone = cols.DONE.filter(it => new Date(it.doneAt || it.createdAt) < cutoff);
+  const showAllDone = searchQuery || state._showAllDone;
+
   const emptyMsg = {P1:"즉시 대응할 건이 없어요", P2:"오늘 중 처리할 건이 없어요", P3:"묶어둘 건이 없어요", DONE:"아직 완료한 건이 없어요"};
-  for(const key of ["P1","P2","P3","DONE"]){
-    const el = $("#col" + (key==="DONE" ? "Done" : key));
+  for(const key of ["P1","P2","P3"]){
+    const el = $("#col" + key);
     el.innerHTML = cols[key].length
       ? cols[key].map(cardHTML).join("")
       : `<div class="empty">${emptyMsg[key]}</div>`;
-    $("#cnt" + (key==="DONE" ? "Done" : key)).textContent = cols[key].length;
+    $("#cnt" + key).textContent = cols[key].length;
   }
+
+  const doneEl = $("#colDone");
+  const visibleDone = showAllDone ? cols.DONE : recentDone;
+  let doneHTML = visibleDone.length ? visibleDone.map(cardHTML).join("") : `<div class="empty">${emptyMsg.DONE}</div>`;
+  if(olderDone.length && !showAllDone){
+    doneHTML += `<button class="btn small" style="width:100%;margin-top:8px" id="btnShowOldDone">지난 항목 ${olderDone.length}건 보기</button>`;
+  }
+  if(showAllDone && olderDone.length && !searchQuery){
+    doneHTML += `<button class="btn small" style="width:100%;margin-top:8px" id="btnHideOldDone">최근 7일만 보기</button>`;
+  }
+  doneEl.innerHTML = doneHTML;
+  $("#cntDone").textContent = cols.DONE.length;
+
+  const showBtn = document.getElementById("btnShowOldDone");
+  if(showBtn) showBtn.addEventListener("click", () => { state._showAllDone = true; render(); });
+  const hideBtn = document.getElementById("btnHideOldDone");
+  if(hideBtn) hideBtn.addEventListener("click", () => { state._showAllDone = false; render(); });
+
   renderStats();
 }
 
