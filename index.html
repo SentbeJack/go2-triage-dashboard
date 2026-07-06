@@ -498,6 +498,18 @@ function classify(sender, message){
   return { priority: best || state.defaultPriority, msgType: mtype };
 }
 
+/* ───────── Slack ID → 이름 변환 ───────── */
+function resolveSlackName(raw){
+  if(!raw) return raw;
+  const m = (state.members||[]).find(m => m.slackId === raw);
+  if(m && m.name) return m.name;
+  if(/^U[A-Z0-9]{6,}$/.test(raw)){
+    const m2 = (state.members||[]).find(m => raw.includes(m.slackId));
+    if(m2 && m2.name) return m2.name;
+  }
+  return raw;
+}
+
 /* ───────── 항목 추가 ───────── */
 function addItems(parsed){
   let added = 0, skipped = 0;
@@ -508,12 +520,13 @@ function addItems(parsed){
       const um = msg.match(/https?:\/\/[^\s]*slack\.com\/archives\/[^\s]+/i);
       if(um){ link = um[0]; msg = msg.replace(um[0], "").trim() || msg; }
     }
-    const dup = state.items.some(it => it.sender === (m.sender||"") && it.message === msg);
+    const senderName = resolveSlackName(m.sender||"");
+    const dup = state.items.some(it => it.sender === senderName && it.message === msg);
     if(dup){ skipped++; continue; }
-    const cls = classify(m.sender, msg);
+    const cls = classify(senderName, msg);
     const item = {
       id: uid(),
-      sender: m.sender || "미상",
+      sender: senderName || "미상",
       slackTime: m.slackTime || "",
       message: msg,
       link: link,
