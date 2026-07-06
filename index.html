@@ -576,7 +576,7 @@ function cardHTML(it){
       <span class="time">${esc(it.slackTime)}</span>
       ${it.link ? `<a class="msglink" href="${esc(it.link)}" target="_blank" rel="noopener" title="Slack에서 이 메시지 열기">↗ 열기</a>` : ""}
     </div>
-    <div class="msg">${esc(it.message)}</div>
+    <div class="msg" ${it.link ? `style="cursor:pointer" data-act="open" data-id="${it.id}"` : ""}>${esc(it.message)}</div>
     <div class="tchips">${tChips}</div>
     <div class="actions">${pBtns}<span class="spacer"></span>
       <button class="iconbtn" data-act="link" data-id="${it.id}" title="링크 추가/수정">🔗</button>${doneBtn}
@@ -636,6 +636,7 @@ document.querySelector(".board").addEventListener("click", e => {
   const btn = e.target.closest("[data-act]"); if(!btn) return;
   const it = state.items.find(x => x.id === btn.dataset.id); if(!it) return;
   const act = btn.dataset.act;
+  if(act === "open"){ if(it.link) window.open(it.link, "_blank"); return; }
   if(act === "prio"){ it.priority = btn.dataset.p; it.status = "open"; }
   if(act === "mtype"){ it.msgType = it.msgType === btn.dataset.t ? "" : btn.dataset.t; }
   if(act === "link"){
