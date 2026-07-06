@@ -782,7 +782,9 @@ $("#btnBackfill").addEventListener("click", async () => {
     const data = await res.json();
     if(!data.ok) throw new Error(data.error || "조회 실패");
     if(!data.items || !data.items.length){ toast("Inbox 시트에 데이터가 없어요"); return; }
-    const parsed = data.items.map(m => ({
+    const filtered = data.items.filter(m => !/^test$/i.test((m.message||"").trim()));
+    if(!filtered.length){ toast("새로 가져올 항목이 없어요"); return; }
+    const parsed = filtered.map(m => ({
       sender: m.sender,
       slackTime: m.date ? new Date(m.date).toLocaleTimeString("ko-KR", {hour:"numeric", minute:"2-digit"}) : "",
       message: m.message,
