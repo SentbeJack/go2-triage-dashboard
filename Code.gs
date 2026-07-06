@@ -121,7 +121,9 @@ function doPost(e) {
 /* ───────── Slack 이벤트 처리 ───────── */
 function handleSlackEvent(data) {
   const ev = data.event || {};
-  if (ev.type !== 'message' || ev.subtype || ev.bot_id) return;
+  var allowedSubtypes = ['file_share', 'thread_broadcast'];
+  if (ev.type !== 'message' || ev.bot_id) return;
+  if (ev.subtype && allowedSubtypes.indexOf(ev.subtype) === -1) return;
 
   const props = PropertiesService.getScriptProperties();
   const myId = props.getProperty('MY_SLACK_USER_ID');
