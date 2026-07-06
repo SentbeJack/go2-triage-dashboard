@@ -93,15 +93,7 @@ function doPost(e) {
     }
   }
 
-  // ⑦ 놓친 멘션 백필 (Slack API로 최근 채널 메시지 일괄 수집)
-  if (data.action === 'backfill') {
-    try {
-      var count = backfillMentions(data.hours || 24);
-      return jsonOut({ ok: true, count: count });
-    } catch (err) {
-      return jsonOut({ ok: false, error: String(err) });
-    }
-  }
+  // ⑦ (백필은 doGet으로 이동)
 
   // ⑧ 대시보드 → Triage 시트 동기화 (기존 기능)
   const lock = LockService.getScriptLock();
@@ -294,7 +286,16 @@ function doGet(e) {
     }
     return jsonOut({ ok: true, members: members });
   }
-  return ContentService.createTextOutput('GO2 Triage 백엔드 v4 정상 동작 중이에요.');
+  if (mode === 'backfill') {
+    try {
+      var hours = parseInt(e.parameter.hours) || 24;
+      var count = backfillMentions(hours);
+      return jsonOut({ ok: true, count: count });
+    } catch (err) {
+      return jsonOut({ ok: false, error: String(err) });
+    }
+  }
+  return ContentService.createTextOutput('GO2 Triage 백엔드 v5 정상 동작 중이에요.');
 }
 
 /* ───────── 놓친 멘션 백필 ───────── */

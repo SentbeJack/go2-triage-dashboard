@@ -778,11 +778,7 @@ $("#btnBackfill").addEventListener("click", async () => {
   const btn = $("#btnBackfill");
   btn.disabled = true; btn.textContent = "수집 중…";
   try{
-    const res = await fetch(state.webhook, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ action: "backfill", hours: 24 })
-    });
+    const res = await fetch(state.webhook + "?mode=backfill&hours=24");
     const data = await res.json();
     if(!data.ok) throw new Error(data.error || "백필 실패");
     toast(data.count > 0 ? `${data.count}건의 놓친 멘션을 가져왔어요` : "놓친 멘션이 없어요");
