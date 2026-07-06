@@ -547,6 +547,16 @@ function addItems(parsed){
 }
 
 /* ───────── 렌더 ───────── */
+function applyMemberNames(){
+  if(!state.members||!state.members.length) return;
+  let changed = false;
+  for(const it of state.items){
+    const resolved = resolveSlackName(it.sender);
+    if(resolved !== it.sender){ it.sender = resolved; changed = true; }
+  }
+  if(changed) save();
+}
+
 function cardHTML(it){
   const doneCls = it.status === "done" ? "done-card" : it.priority.toLowerCase();
   const pBtns = ["P1","P2","P3"].map(p =>
@@ -574,6 +584,7 @@ function cardHTML(it){
 }
 
 function render(){
+  applyMemberNames();
   const cols = {P1:[], P2:[], P3:[], DONE:[]};
   for(const it of state.items){
     if(it.status === "done") cols.DONE.push(it);
