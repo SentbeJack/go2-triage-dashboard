@@ -286,6 +286,10 @@ function doGet(e) {
     }
     return jsonOut({ ok: true, members: members });
   }
+  if (mode === 'fix_links') {
+    var fixed = fixMissingLinks();
+    return jsonOut({ ok: true, fixed: fixed });
+  }
   if (mode === 'inbox_all') {
     var sheet = getSheet(INBOX_SHEET, INBOX_HEADERS);
     var last = sheet.getLastRow();
@@ -402,6 +406,38 @@ function getBotChannels(token) {
   } while (cursor && pages < 10);
 
   return channels;
+}
+
+function fixMissingLinks() {
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('SLACK_BOT_TOKEN');
+  if (!token) return 0;
+
+  var sheet = getSheet(INBOX_SHEET, INBOX_HEADERS);
+  var last = sheet.getLastRow();
+  if (last < 2) return 0;
+
+  var range = sheet.getRange(2, 1, last - 1, INBOX_HEADERS.length);
+  var rows = range.getValues();
+  var fixed = 0;
+
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i][4]) continue;
+    var evId = String(rows[i][0]);
+    var parts = evId.split('-');
+    if (parts.length < 2) continue;
+    var channel = parts[0];
+    var ts = parts.slice(1).join('-');
+    if (!/^\d+\.\d+$/.test(ts)) continue;
+    var link = getPermalink(token, channel, ts);
+    if (link) {
+      rows[i][4] = link;
+      fixed++;
+    }
+  }
+
+  if (fixed > 0) range.setValues(rows);
+  return fixed;
 }
 
 function markImported(ids) {
