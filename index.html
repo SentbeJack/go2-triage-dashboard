@@ -803,8 +803,10 @@ setInterval(() => pullInbox(true), 60 * 1000);
 $("#btnBackfill").addEventListener("click", async () => {
   if(!state.webhook){ toast("설정에서 시트 URL을 먼저 등록해주세요"); return; }
   const btn = $("#btnBackfill");
-  btn.disabled = true; btn.textContent = "링크 복구 중…";
+  btn.disabled = true; btn.textContent = "Slack에서 수집 중…";
   try{
+    await fetch(state.webhook + "?mode=backfill&hours=72").then(r=>r.json()).catch(()=>{});
+    btn.textContent = "링크 복구 중…";
     await fetch(state.webhook + "?mode=fix_links").then(r=>r.json()).catch(()=>{});
     btn.textContent = "불러오는 중…";
     const res = await fetch(state.webhook + "?mode=inbox_all");

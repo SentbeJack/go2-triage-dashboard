@@ -288,6 +288,15 @@ function doGet(e) {
     }
     return jsonOut({ ok: true, members: members });
   }
+  if (mode === 'backfill') {
+    try {
+      var hours = Number(e.parameter.hours) || 72;
+      var added = backfillMentions(hours);
+      return jsonOut({ ok: true, added: added });
+    } catch (err) {
+      return jsonOut({ ok: false, error: String(err) });
+    }
+  }
   if (mode === 'fix_links') {
     var fixed = fixMissingLinks();
     return jsonOut({ ok: true, fixed: fixed });
@@ -353,9 +362,11 @@ function backfillMentions(hours) {
       if (!data.ok) break;
 
       var messages = data.messages || [];
+      var bfAllowed = ['file_share', 'thread_broadcast'];
       for (var mi = 0; mi < messages.length; mi++) {
         var msg = messages[mi];
-        if (msg.subtype || msg.bot_id) continue;
+        if (msg.bot_id) continue;
+        if (msg.subtype && bfAllowed.indexOf(msg.subtype) === -1) continue;
         if (!msg.text || msg.text.indexOf('<@' + myId + '>') === -1) continue;
         if (msg.user === myId) continue;
 
