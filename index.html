@@ -325,6 +325,19 @@ KRW 수납 건 질문 있습니다 https://sentbe.slack.com/archives/…"></text
       </select>
     </div>
 
+    <h3>팀원 Slack ID 관리</h3>
+    <p class="desc">팀원의 이름과 Slack 멤버 ID를 등록하면 발신자 자동 인식과 분류 규칙에 활용돼요. Slack 멤버 ID는 프로필 → ⋯ → 멤버 ID 복사로 확인할 수 있어요.</p>
+    <table class="rules-table" id="membersTable">
+      <thead><tr><th>이름</th><th>Slack ID</th><th style="width:60px">이메일</th><th style="width:40px"></th></tr></thead>
+      <tbody id="membersBody"></tbody>
+    </table>
+    <div class="rule-add">
+      <input id="memberName" placeholder="예: Jay" style="width:120px">
+      <input id="memberSlackId" placeholder="U07K19UT4JF" style="width:140px">
+      <input id="memberEmail" placeholder="jay@sentbe.com" style="flex:1">
+      <button class="btn small" id="btnAddMember">추가</button>
+    </div>
+
     <h3>Google Sheets 연동</h3>
     <p class="desc">설정 가이드대로 시트에 Apps Script를 배포하고, 발급된 웹 앱 URL을 붙여넣으세요. 저장하면 분류하는 메시지가 시트에 자동으로 쌓이고, Slack 앱 연동까지 마쳤다면 멘션이 1분마다 자동으로 보드에 들어와요.</p>
     <div class="field-row">
@@ -338,6 +351,17 @@ KRW 수납 건 질문 있습니다 https://sentbe.slack.com/archives/…"></text
       <input type="checkbox" id="notifyToggle">
       P1 미처리 건이 있으면 30분마다 브라우저 알림 (탭이 열려 있을 때만 동작해요)
     </label>
+    <div class="field-row" style="margin-top:8px">
+      <label class="check-row">
+        <input type="checkbox" id="emailNotifyToggle">
+        P1 수신 시 이메일 알림 (Apps Script가 Gmail로 발송)
+      </label>
+    </div>
+    <div class="field-row" style="margin-top:6px">
+      <input type="email" id="notifyEmail" placeholder="알림 받을 이메일 (예: jack@sentbe.com)" style="flex:1; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-family:inherit; font-size:12px;">
+      <button class="btn small" id="btnTestEmail">테스트 발송</button>
+    </div>
+    <div class="sync-status" id="emailStatus"></div>
 
     <h3>데이터</h3>
     <p class="desc">모든 데이터는 이 브라우저에만 저장돼요. 다른 PC로 옮길 땐 CSV로 내려받아 옮기세요.</p>
@@ -382,7 +406,10 @@ let state = {
   rules: DEFAULT_RULES.slice(),
   defaultPriority: "P2",
   webhook: "",
-  notify: false
+  notify: false,
+  members: [],         // {name, slackId, email}
+  emailNotify: false,
+  notifyEmail: ""
 };
 
 function load(){
@@ -769,12 +796,71 @@ $("#btnAddRule").addEventListener("click", () => {
   $("#ruleValue").value = "";
   save(); renderRules();
 });
+/* ───────── 팀원 관리 ───────── */
+function renderMembers(){
+  if(!Array.isArray(state.members)) state.members = [];
+  $("#membersBody").innerHTML = state.members.map((m,i) => `<tr>
+    <td>${esc(m.name)}</td>
+    <td style="font-family:monospace;font-size:12px">${esc(m.slackId)}</td>
+    <td style="font-size:12px">${esc(m.email || "—")}</td>
+    <td><button class="iconbtn del" data-member="${i}" title="팀원 삭제">×</button></td>
+  </tr>`).join("") || `<tr><td colspan="4" style="color:var(--muted)">등록된 팀원이 없어요.</td></tr>`;
+}
+$("#membersBody").addEventListener("click", e => {
+  const btn = e.target.closest("[data-member]"); if(!btn) return;
+  state.members.splice(Number(btn.dataset.member), 1);
+  save(); renderMembers();
+});
+$("#btnAddMember").addEventListener("click", () => {
+  const name = $("#memberName").value.trim();
+  const slackId = $("#memberSlackId").value.trim();
+  if(!name || !slackId){ toast("이름과 Slack ID를 모두 입력해주세요"); return; }
+  if(!/^U[A-Z0-9]{6,}$/i.test(slackId)){ toast("Slack ID는 U로 시작하는 영숫자여야 해요"); return; }
+  if(state.members.some(m => m.slackId === slackId)){ toast("이미 등록된 Slack ID예요"); return; }
+  state.members.push({ name, slackId, email: $("#memberEmail").value.trim() });
+  $("#memberName").value = ""; $("#memberSlackId").value = ""; $("#memberEmail").value = "";
+  save(); renderMembers();
+  syncMembersToBackend();
+});
+function syncMembersToBackend(){
+  if(!state.webhook || !state.members.length) return;
+  fetch(state.webhook, {
+    method: "POST", mode: "no-cors",
+    headers: {"Content-Type": "text/plain;charset=utf-8"},
+    body: JSON.stringify({ action: "updateMembers", members: state.members })
+  }).catch(() => {});
+}
+
+/* ───────── 이메일 알림 테스트 ───────── */
+$("#btnTestEmail").addEventListener("click", () => {
+  const email = $("#notifyEmail").value.trim();
+  const st = $("#emailStatus");
+  const url = $("#webhookUrl").value.trim();
+  if(!url){ st.textContent = "시트 URL을 먼저 등록해주세요"; st.className = "sync-status err"; return; }
+  if(!email){ st.textContent = "이메일을 입력해주세요"; st.className = "sync-status err"; return; }
+  fetch(url, {
+    method: "POST", mode: "no-cors",
+    headers: {"Content-Type": "text/plain;charset=utf-8"},
+    body: JSON.stringify({ action: "testEmail", email: email })
+  }).then(() => {
+    st.textContent = "테스트 이메일을 발송했어요. 받은편지함을 확인해주세요 (1~2분 소요)";
+    st.className = "sync-status ok";
+  }).catch(() => {
+    st.textContent = "발송에 실패했어요. 시트 URL과 배포 설정을 확인해주세요";
+    st.className = "sync-status err";
+  });
+});
+
 $("#btnSettings").addEventListener("click", () => {
   renderRules();
+  renderMembers();
   $("#webhookUrl").value = state.webhook;
   $("#defaultPriority").value = state.defaultPriority;
   $("#notifyToggle").checked = state.notify;
+  $("#emailNotifyToggle").checked = state.emailNotify;
+  $("#notifyEmail").value = state.notifyEmail;
   $("#syncStatus").textContent = "";
+  $("#emailStatus").textContent = "";
   $("#modalBackdrop").classList.add("open");
 });
 $("#btnCloseModal").addEventListener("click", () => {
@@ -783,6 +869,15 @@ $("#btnCloseModal").addEventListener("click", () => {
   const wantNotify = $("#notifyToggle").checked;
   if(wantNotify && !state.notify) requestNotifyPermission();
   state.notify = wantNotify;
+  state.emailNotify = $("#emailNotifyToggle").checked;
+  state.notifyEmail = $("#notifyEmail").value.trim();
+  if(state.emailNotify && state.notifyEmail && state.webhook){
+    fetch(state.webhook, {
+      method: "POST", mode: "no-cors",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify({ action: "setEmailNotify", email: state.notifyEmail, enabled: true })
+    }).catch(() => {});
+  }
   save();
   $("#modalBackdrop").classList.remove("open");
   toast("설정을 저장했어요");
@@ -817,7 +912,7 @@ $("#btnTestSync").addEventListener("click", () => {
 $("#btnClearAll").addEventListener("click", () => {
   if(!confirm("모든 메시지와 설정을 삭제할까요? 되돌릴 수 없어요.")) return;
   localStorage.removeItem(STORE_KEY);
-  state = { items: [], rules: DEFAULT_RULES.slice(), defaultPriority: "P2", webhook: "", notify: false };
+  state = { items: [], rules: DEFAULT_RULES.slice(), defaultPriority: "P2", webhook: "", notify: false, members: [], emailNotify: false, notifyEmail: "" };
   render(); renderRules();
   toast("전체 데이터를 삭제했어요");
 });
