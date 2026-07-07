@@ -93,7 +93,15 @@ function doPost(e) {
     }
   }
 
-  // ⑦ (백필은 doGet으로 이동)
+  // ⑦ Slack 스레드에 댓글 전송
+  if (data.action === 'slackReply') {
+    try {
+      var result = postSlackReply(data.channel, data.thread_ts, data.text);
+      return jsonOut(result);
+    } catch (err) {
+      return jsonOut({ ok: false, error: String(err) });
+    }
+  }
 
   // ⑧ 대시보드 → Triage 시트 동기화 (기존 기능)
   const lock = LockService.getScriptLock();
@@ -243,6 +251,23 @@ function getPermalink(token, channel, ts) {
     if (j.ok) return j.permalink;
   } catch (e) {}
   return '';
+}
+
+function postSlackReply(channel, thread_ts, text) {
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('SLACK_BOT_TOKEN');
+  if (!token) return { ok: false, error: 'SLACK_BOT_TOKEN이 설정되지 않았어요' };
+  if (!channel || !thread_ts || !text) return { ok: false, error: '채널, 타임스탬프, 메시지가 필요해요' };
+
+  var res = UrlFetchApp.fetch('https://slack.com/api/chat.postMessage', {
+    method: 'post',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json; charset=utf-8' },
+    payload: JSON.stringify({ channel: channel, thread_ts: thread_ts, text: text }),
+    muteHttpExceptions: true
+  });
+  var j = JSON.parse(res.getContentText());
+  if (!j.ok) return { ok: false, error: j.error || '전송 실패' };
+  return { ok: true };
 }
 
 function cleanSlackText(text, myId) {

@@ -580,8 +580,15 @@ function cardHTML(it){
     <div class="msg" ${it.link ? `style="cursor:pointer" data-act="open" data-id="${it.id}"` : ""}>${esc(it.message)}</div>
     <div class="tchips">${tChips}</div>
     <div class="actions">${pBtns}<span class="spacer"></span>
+      ${it.link ? `<button class="iconbtn" data-act="reply" data-id="${it.id}" title="Slack 스레드에 댓글">💬</button>` : ""}
       <button class="iconbtn" data-act="link" data-id="${it.id}" title="링크 추가/수정">🔗</button>${doneBtn}
       <button class="iconbtn del" data-act="del" data-id="${it.id}" title="삭제">×</button>
+    </div>
+    <div class="reply-box" id="reply-${it.id}" style="display:none;margin-top:6px">
+      <div style="display:flex;gap:4px">
+        <input type="text" class="reply-input" placeholder="댓글 입력…" style="flex:1;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit">
+        <button class="btn small primary" data-act="sendReply" data-id="${it.id}" style="white-space:nowrap">전송</button>
+      </div>
     </div>
   </div>`;
 }
@@ -672,12 +679,51 @@ function renderStats(){
     : "유형 지정 건 기준";
 }
 
+/* ───────── Slack 링크 파싱 ───────── */
+function parseSlackLink(link){
+  if(!link) return null;
+  const m = link.match(/archives\/([A-Z0-9]+)\/p(\d+)/);
+  if(!m) return null;
+  const raw = m[2];
+  const ts = raw.slice(0, 10) + "." + raw.slice(10);
+  return { channel: m[1], thread_ts: ts };
+}
+
 /* ───────── 카드 액션 (이벤트 위임) ───────── */
 document.querySelector(".board").addEventListener("click", e => {
   const btn = e.target.closest("[data-act]"); if(!btn) return;
   const it = state.items.find(x => x.id === btn.dataset.id); if(!it) return;
   const act = btn.dataset.act;
   if(act === "open"){ if(it.link) window.open(it.link, "_blank"); return; }
+  if(act === "reply"){
+    const box = document.getElementById("reply-" + it.id);
+    if(box) box.style.display = box.style.display === "none" ? "block" : "none";
+    return;
+  }
+  if(act === "sendReply"){
+    const box = document.getElementById("reply-" + it.id);
+    const input = box && box.querySelector(".reply-input");
+    const text = input && input.value.trim();
+    if(!text){ toast("댓글을 입력하세요"); return; }
+    const parsed = parseSlackLink(it.link);
+    if(!parsed){ toast("Slack 링크를 파싱할 수 없어요"); return; }
+    const sendBtn = btn;
+    sendBtn.disabled = true; sendBtn.textContent = "전송 중…";
+    fetch(state.webhook, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify({ action: "slackReply", channel: parsed.channel, thread_ts: parsed.thread_ts, text: text })
+    }).then(()=>{
+      toast("Slack 스레드에 댓글을 남겼어요");
+      input.value = "";
+      box.style.display = "none";
+    }).catch(err=>{
+      toast("댓글 전송 실패: " + err.message);
+    }).finally(()=>{
+      sendBtn.disabled = false; sendBtn.textContent = "전송";
+    });
+    return;
+  }
   if(act === "prio"){ it.priority = btn.dataset.p; it.status = "open"; }
   if(act === "mtype"){ it.msgType = it.msgType === btn.dataset.t ? "" : btn.dataset.t; }
   if(act === "link"){
