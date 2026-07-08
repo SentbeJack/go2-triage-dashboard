@@ -70,13 +70,15 @@ function doPost(e) {
 
   // ⑤ 이메일 알림 설정
   if (data.action === 'setEmailNotify') {
+    if (!data.email || !isValidEmail(data.email)) return jsonOut({ ok: false, error: '유효한 이메일이 아니에요' });
     const props = PropertiesService.getScriptProperties();
-    if (data.email) props.setProperty('EMAIL_NOTIFY', data.email);
+    props.setProperty('EMAIL_NOTIFY', data.email);
     return jsonOut({ ok: true });
   }
 
   // ⑥ 테스트 이메일 발송
   if (data.action === 'testEmail') {
+    if (!data.email || !isValidEmail(data.email)) return jsonOut({ ok: false, error: '유효한 이메일이 아니에요' });
     try {
       MailApp.sendEmail({
         to: data.email,
@@ -180,14 +182,15 @@ function sendP1EmailIfNeeded(props, sender, text, link) {
   if (!isP1) return;
 
   try {
-    var linkHtml = link ? '<p><a href="' + link + '" style="color:#1F5E7A">Slack에서 보기</a></p>' : '';
+    var safeLink = (link && /^https?:\/\//.test(link)) ? link : '';
+    var linkHtml = safeLink ? '<p><a href="' + escHtml(safeLink) + '" style="color:#1F5E7A">Slack에서 보기</a></p>' : '';
     MailApp.sendEmail({
       to: email,
-      subject: '[GO2 Triage] P1 멘션: ' + sender,
+      subject: '[GO2 Triage] P1 멘션: ' + escHtml(sender),
       htmlBody: '<div style="font-family:sans-serif;padding:20px">'
         + '<h2 style="color:#E5484D">P1 긴급 멘션</h2>'
-        + '<p><strong>발신자:</strong> ' + sender + '</p>'
-        + '<p><strong>메시지:</strong> ' + text.substring(0, 500) + '</p>'
+        + '<p><strong>발신자:</strong> ' + escHtml(sender) + '</p>'
+        + '<p><strong>메시지:</strong> ' + escHtml(text.substring(0, 500)) + '</p>'
         + linkHtml
         + '<p style="color:#61707D;font-size:13px;margin-top:16px">— GO2 Triage Dashboard</p>'
         + '</div>'
@@ -260,7 +263,10 @@ function postSlackReply(channel, thread_ts, text) {
   var token = userToken || botToken;
   var tokenType = userToken ? 'user' : 'bot';
   if (!token) return { ok: false, error: 'SLACK_USER_TOKEN 또는 SLACK_BOT_TOKEN이 설정되지 않았어요' };
-  if (!channel || !thread_ts || !text) return { ok: false, error: '채널=' + channel + ', ts=' + thread_ts + ', text=' + (text ? 'OK' : '없음') };
+  if (!channel || !thread_ts || !text) return { ok: false, error: '필수 파라미터가 누락됐어요' };
+  if (!isValidChannel(channel)) return { ok: false, error: '유효하지 않은 채널 ID' };
+  if (!isValidTs(thread_ts)) return { ok: false, error: '유효하지 않은 타임스탬프' };
+  if (text.length > 4000) return { ok: false, error: '메시지는 4,000자까지만 가능해요' };
 
   var payload = { channel: channel, thread_ts: thread_ts, text: text };
   if (tokenType === 'user') payload.as_user = true;
@@ -275,6 +281,14 @@ function postSlackReply(channel, thread_ts, text) {
   if (!j.ok) return { ok: false, error: '[' + tokenType + '] ' + (j.error || '전송 실패') };
   return { ok: true, tokenType: tokenType };
 }
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function isValidChannel(ch) { return /^[A-Z0-9]{8,12}$/.test(ch); }
+function isValidTs(ts) { return /^\d{10}\.\d{4,8}$/.test(ts); }
+function isValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
 function cleanSlackText(text, myId) {
   return text

@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://script.google.com; img-src 'self' data:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
 <title>GO2 Triage — Slack 멘션 라우팅</title>
 <style>
   :root{
@@ -452,6 +454,14 @@ function toast(msg){
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
+function isSafeUrl(url){
+  if(!url) return false;
+  try{ const u = new URL(url); return u.protocol === "https:" || u.protocol === "http:"; }
+  catch(e){ return false; }
+}
+function isValidWebhook(url){
+  return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(url);
+}
 function mondayOfThisWeek(){
   const d = new Date(); const day = (d.getDay()+6)%7; // 월=0
   d.setHours(0,0,0,0); d.setDate(d.getDate()-day); return d;
@@ -588,12 +598,12 @@ function cardHTML(it){
     <div class="top">
       <span class="sender">${esc(it.sender)}</span>
       <span class="time">${esc(it.slackTime)}</span>
-      ${it.link ? `<a class="msglink" href="${esc(it.link)}" target="_blank" rel="noopener" title="Slack에서 이 메시지 열기">↗ 열기</a>` : ""}
+      ${it.link && isSafeUrl(it.link) ? `<a class="msglink" href="${esc(it.link)}" target="_blank" rel="noopener noreferrer" title="Slack에서 이 메시지 열기">↗ 열기</a>` : ""}
     </div>
-    <div class="msg" ${it.link ? `style="cursor:pointer" data-act="open" data-id="${it.id}"` : ""}>${esc(it.message)}</div>
+    <div class="msg" ${it.link && isSafeUrl(it.link) ? `style="cursor:pointer" data-act="open" data-id="${it.id}"` : ""}>${esc(it.message)}</div>
     <div class="tchips">${tChips}</div>
     <div class="actions">${pBtns}<span class="spacer"></span>
-      ${it.link ? `<button class="iconbtn" data-act="reply" data-id="${it.id}" title="Slack 스레드에 댓글">💬</button>` : ""}
+      ${it.link && isSafeUrl(it.link) ? `<button class="iconbtn" data-act="reply" data-id="${it.id}" title="Slack 스레드에 댓글">💬</button>` : ""}
       <button class="iconbtn" data-act="link" data-id="${it.id}" title="링크 추가/수정">🔗</button>${doneBtn}
       <button class="iconbtn del" data-act="del" data-id="${it.id}" title="삭제">×</button>
     </div>
@@ -781,7 +791,7 @@ document.querySelector(".board").addEventListener("click", e => {
   const btn = e.target.closest("[data-act]"); if(!btn) return;
   const it = state.items.find(x => x.id === btn.dataset.id); if(!it) return;
   const act = btn.dataset.act;
-  if(act === "open"){ if(it.link) window.open(it.link, "_blank"); return; }
+  if(act === "open"){ if(it.link && isSafeUrl(it.link)) window.open(it.link, "_blank"); return; }
   if(act === "reply"){
     const box = document.getElementById("reply-" + it.id);
     if(box) box.style.display = box.style.display === "none" ? "block" : "none";
@@ -792,6 +802,7 @@ document.querySelector(".board").addEventListener("click", e => {
     const input = box && box.querySelector(".reply-input");
     const text = input && input.value.trim();
     if(!text){ toast("댓글을 입력하세요"); return; }
+    if(text.length > 4000){ toast("댓글은 4,000자까지만 보낼 수 있어요"); return; }
     const parsed = parseSlackLink(it.link);
     if(!parsed){ toast("Slack 링크를 파싱할 수 없어요"); return; }
     const sendBtn = btn;
@@ -815,7 +826,9 @@ document.querySelector(".board").addEventListener("click", e => {
   if(act === "link"){
     const v = prompt("Slack 메시지 링크를 입력하세요 (비우면 링크 제거)", it.link || "");
     if(v === null) return;
-    it.link = v.trim();
+    const trimmed = v.trim();
+    if(trimmed && !isSafeUrl(trimmed)){ toast("https:// 또는 http:// 로 시작하는 링크만 허용돼요"); return; }
+    it.link = trimmed;
   }
   if(act === "done"){ it.status = "done"; it.doneAt = new Date().toISOString(); }
   if(act === "reopen"){ it.status = "open"; it.doneAt = null; }
@@ -1111,7 +1124,9 @@ $("#btnSettings").addEventListener("click", () => {
   $("#modalBackdrop").classList.add("open");
 });
 $("#btnCloseModal").addEventListener("click", () => {
-  state.webhook = $("#webhookUrl").value.trim();
+  const newWebhook = $("#webhookUrl").value.trim();
+  if(newWebhook && !isValidWebhook(newWebhook)){ toast("올바른 Apps Script 웹 앱 URL이 아니에요"); return; }
+  state.webhook = newWebhook;
   state.defaultPriority = $("#defaultPriority").value;
   const wantNotify = $("#notifyToggle").checked;
   if(wantNotify && !state.notify) requestNotifyPermission();
