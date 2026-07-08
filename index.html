@@ -713,7 +713,7 @@ document.querySelector(".board").addEventListener("click", e => {
       + "&ts=" + encodeURIComponent(parsed.thread_ts) + "&text=" + encodeURIComponent(text);
     fetch(replyUrl).then(r => r.json()).then(data => {
       if(!data.ok) throw new Error(data.error || "전송 실패");
-      toast("Slack 스레드에 댓글을 남겼어요");
+      toast("Slack에 댓글 남김 (" + (data.tokenType === "user" ? "내 계정" : "봇 계정") + ")");
       input.value = "";
       box.style.display = "none";
     }).catch(err=>{

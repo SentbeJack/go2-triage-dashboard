@@ -255,19 +255,25 @@ function getPermalink(token, channel, ts) {
 
 function postSlackReply(channel, thread_ts, text) {
   var props = PropertiesService.getScriptProperties();
-  var token = props.getProperty('SLACK_USER_TOKEN') || props.getProperty('SLACK_BOT_TOKEN');
+  var userToken = props.getProperty('SLACK_USER_TOKEN');
+  var botToken = props.getProperty('SLACK_BOT_TOKEN');
+  var token = userToken || botToken;
+  var tokenType = userToken ? 'user' : 'bot';
   if (!token) return { ok: false, error: 'SLACK_USER_TOKEN 또는 SLACK_BOT_TOKEN이 설정되지 않았어요' };
-  if (!channel || !thread_ts || !text) return { ok: false, error: '채널, 타임스탬프, 메시지가 필요해요' };
+  if (!channel || !thread_ts || !text) return { ok: false, error: '채널=' + channel + ', ts=' + thread_ts + ', text=' + (text ? 'OK' : '없음') };
+
+  var payload = { channel: channel, thread_ts: thread_ts, text: text };
+  if (tokenType === 'user') payload.as_user = true;
 
   var res = UrlFetchApp.fetch('https://slack.com/api/chat.postMessage', {
     method: 'post',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json; charset=utf-8' },
-    payload: JSON.stringify({ channel: channel, thread_ts: thread_ts, text: text }),
+    payload: JSON.stringify(payload),
     muteHttpExceptions: true
   });
   var j = JSON.parse(res.getContentText());
-  if (!j.ok) return { ok: false, error: j.error || '전송 실패' };
-  return { ok: true };
+  if (!j.ok) return { ok: false, error: '[' + tokenType + '] ' + (j.error || '전송 실패') };
+  return { ok: true, tokenType: tokenType };
 }
 
 function cleanSlackText(text, myId) {
