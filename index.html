@@ -24,21 +24,21 @@
   *{box-sizing:border-box;margin:0;padding:0}
   body{
     font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Segoe UI",sans-serif;
-    background:var(--bg); color:var(--ink); font-size:14px; line-height:1.5;
+    background:var(--bg); color:var(--ink); font-size:15px; line-height:1.6;
     min-height:100vh;
   }
   header{
     background:var(--panel); border-bottom:1px solid var(--line);
-    padding:14px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:16px 32px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;
     position:sticky; top:0; z-index:20;
   }
-  .brand{display:flex; align-items:baseline; gap:10px}
-  .brand h1{font-size:18px; font-weight:800; letter-spacing:-.02em}
-  .brand .sub{font-size:12px; color:var(--muted)}
+  .brand{display:flex; align-items:baseline; gap:12px}
+  .brand h1{font-size:20px; font-weight:800; letter-spacing:-.02em}
+  .brand .sub{font-size:13px; color:var(--muted)}
   .spacer{flex:1}
   .btn{
     border:1px solid var(--line); background:var(--panel); color:var(--ink);
-    padding:7px 13px; border-radius:8px; font-size:13px; font-weight:600;
+    padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600;
     cursor:pointer; transition:background .15s,border-color .15s;
     font-family:inherit;
   }
@@ -49,7 +49,7 @@
   .btn.small{padding:4px 9px; font-size:12px}
   .btn.danger{color:var(--p1); border-color:#F0C7C8}
   .btn.danger:hover{background:var(--p1-bg)}
-  main{max-width:1280px; margin:0 auto; padding:20px 24px 60px}
+  main{max-width:1600px; margin:0 auto; padding:24px 40px 60px}
 
   /* ── 붙여넣기 존 ── */
   .intake{
@@ -102,29 +102,29 @@
   }
   .stat{
     background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-    padding:12px 16px; flex:1; min-width:150px; box-shadow:var(--shadow);
+    padding:14px 20px; flex:1; min-width:160px; box-shadow:var(--shadow);
   }
-  .stat .label{font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.03em}
-  .stat .value{font-size:22px; font-weight:800; letter-spacing:-.02em; margin-top:2px}
-  .stat .detail{font-size:11px; color:var(--muted); margin-top:2px}
+  .stat .label{font-size:12px; color:var(--muted); font-weight:600; letter-spacing:.03em}
+  .stat .value{font-size:26px; font-weight:800; letter-spacing:-.02em; margin-top:3px}
+  .stat .detail{font-size:12px; color:var(--muted); margin-top:3px}
 
   /* ── 보드 ── */
-  .board{display:grid; grid-template-columns:repeat(4,1fr); gap:14px}
+  .board{display:grid; grid-template-columns:repeat(4,1fr); gap:18px}
   .col{
-    background:transparent; border-radius:var(--radius); min-height:220px;
+    background:transparent; border-radius:var(--radius); min-height:260px;
     display:flex; flex-direction:column;
   }
   .col-head{
-    display:flex; align-items:center; gap:8px; padding:0 4px 8px;
+    display:flex; align-items:center; gap:8px; padding:0 4px 10px;
   }
-  .col-head .dot{width:9px; height:9px; border-radius:50%}
-  .col-head h3{font-size:13px; font-weight:700}
+  .col-head .dot{width:10px; height:10px; border-radius:50%}
+  .col-head h3{font-size:14px; font-weight:700}
   .col-head .count{
-    font-size:11px; font-weight:700; color:var(--muted);
-    background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:1px 8px;
+    font-size:12px; font-weight:700; color:var(--muted);
+    background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:2px 10px;
   }
   .col-body{
-    flex:1; display:flex; flex-direction:column; gap:8px; padding:8px;
+    flex:1; display:flex; flex-direction:column; gap:10px; padding:10px;
     border:1.5px dashed transparent; border-radius:var(--radius); transition:border-color .15s, background .15s;
   }
   .col-body.dragover{border-color:var(--accent); background:rgba(31,94,122,.05)}
@@ -132,8 +132,8 @@
   .col.p3 .dot{background:var(--p3)} .col.done .dot{background:var(--done)}
 
   .card{
-    background:var(--panel); border:1px solid var(--line); border-radius:8px;
-    box-shadow:var(--shadow); padding:10px 12px 10px 14px; cursor:grab; position:relative;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    box-shadow:var(--shadow); padding:14px 16px 14px 18px; cursor:grab; position:relative;
     animation:slidein .2s ease;
   }
   @keyframes slidein{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:none}}
@@ -146,11 +146,14 @@
   .card.p3::before{background:var(--p3)} .card.done-card::before{background:var(--done)}
   .card.done-card{opacity:.75}
   .card.done-card .msg{text-decoration:line-through; color:var(--muted)}
-  .card .top{display:flex; align-items:center; gap:8px; margin-bottom:4px}
-  .card .sender{font-weight:700; font-size:13px}
-  .card .time{font-size:11px; color:var(--muted)}
-  .card .msg{font-size:13px; word-break:break-word; white-space:pre-wrap}
-  .card .actions{display:flex; gap:6px; margin-top:8px; align-items:center}
+  .card .top{display:flex; align-items:center; gap:10px; margin-bottom:6px}
+  .card .sender{font-weight:700; font-size:14px}
+  .card .time{font-size:12px; color:var(--muted)}
+  .card .msg{font-size:14px; word-break:break-word; line-height:1.6}
+  .card .msg code{background:#F0F3F6; padding:1px 5px; border-radius:4px; font-size:13px; font-family:"SF Mono","Fira Code",monospace}
+  .card .msg ul,.card .msg ol{margin:4px 0 4px 18px; padding:0}
+  .card .msg li{margin:2px 0}
+  .card .actions{display:flex; gap:8px; margin-top:10px; align-items:center}
   .pbtn{
     border:1px solid var(--line); background:#fff; border-radius:6px;
     font-size:11px; font-weight:700; padding:2px 7px; cursor:pointer; color:var(--muted);
@@ -181,6 +184,28 @@
   }
   .mention-item:hover,.mention-item.active{background:#EDF4F8; color:var(--accent)}
   .mention-item .mi-id{font-size:11px; color:var(--muted); font-family:monospace}
+  /* ── 서식 툴바 ── */
+  .fmt-toolbar{display:flex; gap:2px; padding:4px 4px 6px; border-bottom:1px solid var(--line); margin-bottom:4px}
+  .fmt-btn{
+    border:none; background:none; cursor:pointer; font-size:13px; color:var(--muted);
+    padding:3px 7px; border-radius:4px; font-family:inherit; line-height:1;
+  }
+  .fmt-btn:hover{background:#EDF4F8; color:var(--ink)}
+  .fmt-btn .fb{font-weight:800}
+  .fmt-btn .fi{font-style:italic}
+  .fmt-btn .fs{text-decoration:line-through}
+  .fmt-btn .fc{font-family:"SF Mono","Fira Code",monospace; font-size:12px}
+  .reply-textarea{
+    width:100%; min-height:60px; max-height:200px; resize:vertical;
+    border:none; padding:6px 8px; font-family:inherit; font-size:13px;
+    color:var(--ink); background:transparent; outline:none; line-height:1.5;
+  }
+  .reply-wrap{
+    border:1px solid var(--line); border-radius:8px; background:#fff;
+    position:relative; overflow:hidden;
+  }
+  .reply-footer{display:flex; justify-content:space-between; align-items:center; padding:4px 6px 6px}
+  .reply-hint{font-size:11px; color:var(--muted)}
   .empty{
     font-size:12px; color:#9AAAB8; text-align:center; padding:18px 8px;
     border:1.5px dashed var(--line); border-radius:8px;
@@ -247,7 +272,7 @@
     <span class="sub">Slack 멘션 라우팅 보드</span>
   </div>
   <div class="spacer"></div>
-  <input type="text" id="searchBox" placeholder="티켓 검색 (발신자, 내용, 키워드)" style="padding:6px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;width:220px;font-family:inherit;background:var(--bg)">
+  <input type="text" id="searchBox" placeholder="티켓 검색 (발신자, 내용, 키워드)" style="padding:8px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;width:280px;font-family:inherit;background:var(--bg)">
   <button class="btn small" id="btnPullInbox" title="Slack에서 자동 수신된 멘션을 지금 가져오기 (1분마다 자동으로도 확인해요)">Slack 수신함</button>
   <button class="btn small" id="btnBackfill" title="Inbox 시트의 전체 항목을 다시 가져와서 누락된 건을 복구">누락 복구</button>
   <button class="btn small" id="btnSyncAll" title="모든 항목을 Google Sheets에 전체 동기화">시트 전체 동기화</button>
@@ -454,6 +479,33 @@ function toast(msg){
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
+function renderMrkdwn(text){
+  let s = esc(text);
+  s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*([^\*\n]+)\*/g, '<strong>$1</strong>');
+  s = s.replace(/(?<![a-zA-Z0-9])_([^_\n]+)_(?![a-zA-Z0-9])/g, '<em>$1</em>');
+  s = s.replace(/~([^~\n]+)~/g, '<s>$1</s>');
+  const lines = s.split('\n');
+  let out = [], inUl = false, inOl = false;
+  for(const line of lines){
+    const bm = line.match(/^[•·\-]\s+(.+)/);
+    const nm = line.match(/^(\d+)[.)]\s+(.+)/);
+    if(bm){
+      if(!inUl){ if(inOl){ out.push('</ol>'); inOl=false; } out.push('<ul>'); inUl=true; }
+      out.push('<li>'+bm[1]+'</li>'); continue;
+    }
+    if(nm){
+      if(!inOl){ if(inUl){ out.push('</ul>'); inUl=false; } out.push('<ol>'); inOl=true; }
+      out.push('<li>'+nm[2]+'</li>'); continue;
+    }
+    if(inUl){ out.push('</ul>'); inUl=false; }
+    if(inOl){ out.push('</ol>'); inOl=false; }
+    out.push(line);
+  }
+  if(inUl) out.push('</ul>');
+  if(inOl) out.push('</ol>');
+  return out.join('\n');
+}
 function isSafeUrl(url){
   if(!url) return false;
   try{ const u = new URL(url); return u.protocol === "https:" || u.protocol === "http:"; }
@@ -600,18 +652,29 @@ function cardHTML(it){
       <span class="time">${esc(it.slackTime)}</span>
       ${it.link && isSafeUrl(it.link) ? `<a class="msglink" href="${esc(it.link)}" target="_blank" rel="noopener noreferrer" title="Slack에서 이 메시지 열기">↗ 열기</a>` : ""}
     </div>
-    <div class="msg" ${it.link && isSafeUrl(it.link) ? `style="cursor:pointer" data-act="open" data-id="${it.id}"` : ""}>${esc(it.message)}</div>
+    <div class="msg" ${it.link && isSafeUrl(it.link) ? `style="cursor:pointer" data-act="open" data-id="${it.id}"` : ""}>${renderMrkdwn(it.message)}</div>
     <div class="tchips">${tChips}</div>
     <div class="actions">${pBtns}<span class="spacer"></span>
       ${it.link && isSafeUrl(it.link) ? `<button class="iconbtn" data-act="reply" data-id="${it.id}" title="Slack 스레드에 댓글">💬</button>` : ""}
       <button class="iconbtn" data-act="link" data-id="${it.id}" title="링크 추가/수정">🔗</button>${doneBtn}
       <button class="iconbtn del" data-act="del" data-id="${it.id}" title="삭제">×</button>
     </div>
-    <div class="reply-box" id="reply-${it.id}" style="display:none;margin-top:6px">
-      <div style="display:flex;gap:4px;position:relative">
+    <div class="reply-box" id="reply-${it.id}" style="display:none;margin-top:8px">
+      <div class="reply-wrap">
         <div class="mention-popup" id="mention-popup-${it.id}"></div>
-        <input type="text" class="reply-input" placeholder="댓글 입력… (@로 멘션)" data-item-id="${it.id}" style="flex:1;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit">
-        <button class="btn small primary" data-act="sendReply" data-id="${it.id}" style="white-space:nowrap">전송</button>
+        <div class="fmt-toolbar">
+          <button class="fmt-btn" data-fmt="bold" title="굵게 (*텍스트*)"><span class="fb">B</span></button>
+          <button class="fmt-btn" data-fmt="italic" title="기울임 (_텍스트_)"><span class="fi">I</span></button>
+          <button class="fmt-btn" data-fmt="strike" title="취소선 (~텍스트~)"><span class="fs">S</span></button>
+          <button class="fmt-btn" data-fmt="code" title="코드 (\`텍스트\`)"><span class="fc">&lt;/&gt;</span></button>
+          <button class="fmt-btn" data-fmt="bullet" title="글머리 기호">• 목록</button>
+          <button class="fmt-btn" data-fmt="number" title="번호 목록">1. 목록</button>
+        </div>
+        <textarea class="reply-input reply-textarea" placeholder="댓글 입력… (@로 멘션, Slack 서식 지원)" data-item-id="${it.id}"></textarea>
+        <div class="reply-footer">
+          <span class="reply-hint">*굵게* _기울임_ ~취소~ \`코드\` • 글머리</span>
+          <button class="btn small primary" data-act="sendReply" data-id="${it.id}">전송</button>
+        </div>
       </div>
     </div>
   </div>`;
@@ -694,6 +757,35 @@ document.querySelector(".board").addEventListener("click", e => {
 
 document.addEventListener("click", e => {
   if(!e.target.closest(".reply-box")) closeMention();
+});
+
+/* ───────── 서식 툴바 ───────── */
+document.querySelector(".board").addEventListener("click", e => {
+  const btn = e.target.closest(".fmt-btn"); if(!btn) return;
+  const wrap = btn.closest(".reply-box");
+  const ta = wrap && wrap.querySelector(".reply-textarea"); if(!ta) return;
+  const fmt = btn.dataset.fmt;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const sel = ta.value.slice(start, end);
+  const before = ta.value.slice(0, start), after = ta.value.slice(end);
+  let insert = "";
+  if(fmt === "bold") insert = "*" + (sel || "텍스트") + "*";
+  else if(fmt === "italic") insert = "_" + (sel || "텍스트") + "_";
+  else if(fmt === "strike") insert = "~" + (sel || "텍스트") + "~";
+  else if(fmt === "code") insert = "`" + (sel || "코드") + "`";
+  else if(fmt === "bullet"){
+    const lines = (sel || "항목").split("\n");
+    insert = lines.map(l => "• " + l).join("\n");
+    if(start > 0 && ta.value[start-1] !== "\n") insert = "\n" + insert;
+  } else if(fmt === "number"){
+    const lines = (sel || "항목").split("\n");
+    insert = lines.map((l, i) => (i+1) + ". " + l).join("\n");
+    if(start > 0 && ta.value[start-1] !== "\n") insert = "\n" + insert;
+  }
+  ta.value = before + insert + after;
+  const cur = (before + insert).length;
+  ta.setSelectionRange(cur, cur);
+  ta.focus();
 });
 
 function matchesSearch(it){
