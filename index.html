@@ -759,33 +759,58 @@ document.addEventListener("click", e => {
   if(!e.target.closest(".reply-box")) closeMention();
 });
 
-/* ───────── 서식 툴바 ───────── */
+/* ───────── 서식 (공통 로직 + 툴바 + 키보드 단축키) ───────── */
+function applyFormat(ta, fmt){
+  if(!ta) return;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const sel = ta.value.slice(start, end);
+  const before = ta.value.slice(0, start), after = ta.value.slice(end);
+  let insert = "", cursorBack = 0;
+  if(fmt === "bold"){
+    if(sel){ insert = "*" + sel + "*"; } else { insert = "**"; cursorBack = 1; }
+  } else if(fmt === "italic"){
+    if(sel){ insert = "_" + sel + "_"; } else { insert = "__"; cursorBack = 1; }
+  } else if(fmt === "strike"){
+    if(sel){ insert = "~" + sel + "~"; } else { insert = "~~"; cursorBack = 1; }
+  } else if(fmt === "code"){
+    if(sel){ insert = "`" + sel + "`"; } else { insert = "``"; cursorBack = 1; }
+  } else if(fmt === "bullet"){
+    const lines = (sel || "").split("\n");
+    insert = lines.map(l => "• " + l).join("\n");
+    if(start > 0 && ta.value[start-1] !== "\n") insert = "\n" + insert;
+    if(!sel) insert = insert || "• ";
+  } else if(fmt === "number"){
+    const lines = (sel || "").split("\n");
+    insert = lines.map((l, i) => (i+1) + ". " + l).join("\n");
+    if(start > 0 && ta.value[start-1] !== "\n") insert = "\n" + insert;
+    if(!sel) insert = insert || "1. ";
+  }
+  ta.value = before + insert + after;
+  const cur = (before + insert).length - cursorBack;
+  ta.setSelectionRange(cur, cur);
+  ta.focus();
+}
+
 document.querySelector(".board").addEventListener("click", e => {
   const btn = e.target.closest(".fmt-btn"); if(!btn) return;
   const wrap = btn.closest(".reply-box");
   const ta = wrap && wrap.querySelector(".reply-textarea"); if(!ta) return;
-  const fmt = btn.dataset.fmt;
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  const sel = ta.value.slice(start, end);
-  const before = ta.value.slice(0, start), after = ta.value.slice(end);
-  let insert = "";
-  if(fmt === "bold") insert = "*" + (sel || "텍스트") + "*";
-  else if(fmt === "italic") insert = "_" + (sel || "텍스트") + "_";
-  else if(fmt === "strike") insert = "~" + (sel || "텍스트") + "~";
-  else if(fmt === "code") insert = "`" + (sel || "코드") + "`";
-  else if(fmt === "bullet"){
-    const lines = (sel || "항목").split("\n");
-    insert = lines.map(l => "• " + l).join("\n");
-    if(start > 0 && ta.value[start-1] !== "\n") insert = "\n" + insert;
-  } else if(fmt === "number"){
-    const lines = (sel || "항목").split("\n");
-    insert = lines.map((l, i) => (i+1) + ". " + l).join("\n");
-    if(start > 0 && ta.value[start-1] !== "\n") insert = "\n" + insert;
-  }
-  ta.value = before + insert + after;
-  const cur = (before + insert).length;
-  ta.setSelectionRange(cur, cur);
-  ta.focus();
+  applyFormat(ta, btn.dataset.fmt);
+});
+
+document.querySelector(".board").addEventListener("keydown", e => {
+  const ta = e.target.closest(".reply-textarea"); if(!ta) return;
+  if(mentionState.active) return;
+  const mod = e.ctrlKey || e.metaKey; if(!mod) return;
+  let fmt = null;
+  if(!e.shiftKey && e.key === "b") fmt = "bold";
+  else if(!e.shiftKey && e.key === "i") fmt = "italic";
+  else if(e.shiftKey && e.key === "X") fmt = "strike";
+  else if(e.shiftKey && e.key === "C") fmt = "code";
+  else if(!e.shiftKey && e.key === "e") fmt = "code";
+  else if(e.shiftKey && e.key === "*") fmt = "bullet";
+  else if(e.shiftKey && e.key === "&") fmt = "number";
+  if(fmt){ e.preventDefault(); applyFormat(ta, fmt); }
 });
 
 function matchesSearch(it){
