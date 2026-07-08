@@ -880,6 +880,7 @@ function parseSlackLink(link){
 
 /* ───────── 카드 액션 (이벤트 위임) ───────── */
 document.querySelector(".board").addEventListener("click", e => {
+  if(e.target.closest(".fmt-btn") || e.target.closest(".mention-item")) return;
   const btn = e.target.closest("[data-act]"); if(!btn) return;
   const it = state.items.find(x => x.id === btn.dataset.id); if(!it) return;
   const act = btn.dataset.act;
