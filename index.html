@@ -709,12 +709,10 @@ document.querySelector(".board").addEventListener("click", e => {
     if(!parsed){ toast("Slack 링크를 파싱할 수 없어요"); return; }
     const sendBtn = btn;
     sendBtn.disabled = true; sendBtn.textContent = "전송 중…";
-    fetch(state.webhook, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {"Content-Type": "text/plain;charset=utf-8"},
-      body: JSON.stringify({ action: "slackReply", channel: parsed.channel, thread_ts: parsed.thread_ts, text: text })
-    }).then(()=>{
+    const replyUrl = state.webhook + "?mode=reply&channel=" + encodeURIComponent(parsed.channel)
+      + "&ts=" + encodeURIComponent(parsed.thread_ts) + "&text=" + encodeURIComponent(text);
+    fetch(replyUrl).then(r => r.json()).then(data => {
+      if(!data.ok) throw new Error(data.error || "전송 실패");
       toast("Slack 스레드에 댓글을 남겼어요");
       input.value = "";
       box.style.display = "none";

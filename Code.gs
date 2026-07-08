@@ -313,6 +313,17 @@ function doGet(e) {
     }
     return jsonOut({ ok: true, members: members });
   }
+  if (mode === 'reply') {
+    try {
+      var channel = e.parameter.channel;
+      var thread_ts = e.parameter.ts;
+      var text = e.parameter.text;
+      var result = postSlackReply(channel, thread_ts, text);
+      return jsonOut(result);
+    } catch (err) {
+      return jsonOut({ ok: false, error: String(err) });
+    }
+  }
   if (mode === 'backfill') {
     try {
       var hours = Number(e.parameter.hours) || 72;
