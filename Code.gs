@@ -255,8 +255,8 @@ function getPermalink(token, channel, ts) {
 
 function postSlackReply(channel, thread_ts, text) {
   var props = PropertiesService.getScriptProperties();
-  var token = props.getProperty('SLACK_BOT_TOKEN');
-  if (!token) return { ok: false, error: 'SLACK_BOT_TOKEN이 설정되지 않았어요' };
+  var token = props.getProperty('SLACK_USER_TOKEN') || props.getProperty('SLACK_BOT_TOKEN');
+  if (!token) return { ok: false, error: 'SLACK_USER_TOKEN 또는 SLACK_BOT_TOKEN이 설정되지 않았어요' };
   if (!channel || !thread_ts || !text) return { ok: false, error: '채널, 타임스탬프, 메시지가 필요해요' };
 
   var res = UrlFetchApp.fetch('https://slack.com/api/chat.postMessage', {
