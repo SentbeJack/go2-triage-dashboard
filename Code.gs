@@ -333,6 +333,18 @@ function doGet(e) {
     }
     return jsonOut({ ok: true, members: members });
   }
+  if (mode === 'tokenCheck') {
+    var props = PropertiesService.getScriptProperties();
+    var ut = props.getProperty('SLACK_USER_TOKEN') || '';
+    var bt = props.getProperty('SLACK_BOT_TOKEN') || '';
+    return jsonOut({
+      hasUserToken: ut.length > 0,
+      userTokenPrefix: ut.substring(0, 5),
+      hasBotToken: bt.length > 0,
+      botTokenPrefix: bt.substring(0, 5),
+      willUse: ut ? 'user' : 'bot'
+    });
+  }
   if (mode === 'reply') {
     try {
       var channel = e.parameter.channel;
