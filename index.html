@@ -166,6 +166,19 @@
   .iconbtn:hover{background:#F0F4F7; color:var(--ink)}
   .iconbtn.check:hover{color:var(--done)}
   .iconbtn.del:hover{color:var(--p1)}
+  /* ── @ 멘션 자동완성 ── */
+  .mention-popup{
+    position:absolute; bottom:100%; left:0; right:0;
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    box-shadow:0 -4px 16px rgba(23,36,47,.12); max-height:180px; overflow-y:auto;
+    z-index:30; display:none;
+  }
+  .mention-popup.open{display:block}
+  .mention-item{
+    padding:7px 12px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px;
+  }
+  .mention-item:hover,.mention-item.active{background:#EDF4F8; color:var(--accent)}
+  .mention-item .mi-id{font-size:11px; color:var(--muted); font-family:monospace}
   .empty{
     font-size:12px; color:#9AAAB8; text-align:center; padding:18px 8px;
     border:1.5px dashed var(--line); border-radius:8px;
@@ -585,8 +598,9 @@ function cardHTML(it){
       <button class="iconbtn del" data-act="del" data-id="${it.id}" title="삭제">×</button>
     </div>
     <div class="reply-box" id="reply-${it.id}" style="display:none;margin-top:6px">
-      <div style="display:flex;gap:4px">
-        <input type="text" class="reply-input" placeholder="댓글 입력…" style="flex:1;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit">
+      <div style="display:flex;gap:4px;position:relative">
+        <div class="mention-popup" id="mention-popup-${it.id}"></div>
+        <input type="text" class="reply-input" placeholder="댓글 입력… (@로 멘션)" data-item-id="${it.id}" style="flex:1;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit">
         <button class="btn small primary" data-act="sendReply" data-id="${it.id}" style="white-space:nowrap">전송</button>
       </div>
     </div>
@@ -597,6 +611,79 @@ let searchQuery = "";
 $("#searchBox").addEventListener("input", e => {
   searchQuery = e.target.value.trim().toLowerCase();
   render();
+});
+
+/* ───────── @ 멘션 자동완성 ───────── */
+let mentionState = { active: false, itemId: null, startPos: 0, selectedIdx: 0, filtered: [] };
+
+function closeMention(){
+  mentionState.active = false;
+  mentionState.filtered = [];
+  document.querySelectorAll(".mention-popup").forEach(p => { p.classList.remove("open"); p.innerHTML = ""; });
+}
+
+function renderMentionPopup(){
+  const popup = document.getElementById("mention-popup-" + mentionState.itemId);
+  if(!popup || !mentionState.filtered.length){ closeMention(); return; }
+  popup.innerHTML = mentionState.filtered.map((m, i) =>
+    `<div class="mention-item${i === mentionState.selectedIdx ? " active" : ""}" data-mi="${i}">
+      <span>${esc(m.name)}</span><span class="mi-id">${esc(m.slackId)}</span>
+    </div>`
+  ).join("");
+  popup.classList.add("open");
+}
+
+function insertMention(input, member){
+  const before = input.value.slice(0, mentionState.startPos);
+  const after = input.value.slice(input.selectionStart);
+  const mention = "<@" + member.slackId + "> ";
+  input.value = before + mention + after;
+  const cur = (before + mention).length;
+  input.setSelectionRange(cur, cur);
+  closeMention();
+  input.focus();
+}
+
+document.querySelector(".board").addEventListener("input", e => {
+  const input = e.target.closest(".reply-input");
+  if(!input) return;
+  const val = input.value;
+  const pos = input.selectionStart;
+  const textBefore = val.slice(0, pos);
+  const atMatch = textBefore.match(/@([^\s@]*)$/);
+  if(!atMatch){ closeMention(); return; }
+  const query = atMatch[1].toLowerCase();
+  mentionState.active = true;
+  mentionState.itemId = input.dataset.itemId;
+  mentionState.startPos = pos - atMatch[0].length;
+  mentionState.filtered = (state.members || []).filter(m =>
+    m.name.toLowerCase().includes(query) || m.slackId.toLowerCase().includes(query)
+  ).slice(0, 8);
+  mentionState.selectedIdx = 0;
+  renderMentionPopup();
+});
+
+document.querySelector(".board").addEventListener("keydown", e => {
+  const input = e.target.closest(".reply-input");
+  if(!input || !mentionState.active || !mentionState.filtered.length) return;
+  if(e.key === "ArrowDown"){ e.preventDefault(); mentionState.selectedIdx = (mentionState.selectedIdx + 1) % mentionState.filtered.length; renderMentionPopup(); }
+  else if(e.key === "ArrowUp"){ e.preventDefault(); mentionState.selectedIdx = (mentionState.selectedIdx - 1 + mentionState.filtered.length) % mentionState.filtered.length; renderMentionPopup(); }
+  else if(e.key === "Enter" && mentionState.active){ e.preventDefault(); e.stopPropagation(); insertMention(input, mentionState.filtered[mentionState.selectedIdx]); }
+  else if(e.key === "Escape"){ closeMention(); }
+});
+
+document.querySelector(".board").addEventListener("click", e => {
+  const mi = e.target.closest(".mention-item");
+  if(!mi) return;
+  const idx = Number(mi.dataset.mi);
+  const member = mentionState.filtered[idx];
+  if(!member) return;
+  const input = document.querySelector(`.reply-input[data-item-id="${mentionState.itemId}"]`);
+  if(input) insertMention(input, member);
+});
+
+document.addEventListener("click", e => {
+  if(!e.target.closest(".reply-box")) closeMention();
 });
 
 function matchesSearch(it){
